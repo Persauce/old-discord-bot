@@ -1,0 +1,124 @@
+from keep_alive import keep_alive
+import discord
+import os 
+import requests 
+import json
+import random 
+from replit import db
+import random 
+from pprint import pprint
+from pytz import country_timezones
+from requests import Request, Session
+from requests.exceptions import ConnectionError, Timeout, TooManyRedirects
+from datetime import datetime, time, timedelta 
+
+
+
+
+client = discord.Client()
+when = time(12,20,0)
+theid= 668814311900053504
+
+async def called_once_a_day():  # Fired every day
+    await client.wait_until_ready()  # Make sure your guild cache is ready so the channel can be found via get_channel
+    channel = client.get_channel(theid) # Note: It's more efficient to do bot.get_guild(guild_id).get_channel(channel_id) as there's less looping involved, but just get_channel still works fine
+    now = datetime.estnow()
+    if now.time == when:
+      await channel.send("test")
+    
+
+
+
+def get_quote():
+  response = requests.get("https://zenquotes.io/api/random")
+  json_data = json.loads(response.text)
+  quote = discord.Embed(title="Random quotes...", description="", color = 0x002e67)
+  quote.add_field(name='Quote',value =str(json_data[0]['q']) + " - " + str(json_data[0]['a']),inline=False)
+  return(quote) 
+
+def get_made():
+  first = ["chicken feet", "blue cheese", "watermelon", "hairballs", "plastic", "granola bars", "fish scales", "paper", "used toilet paper", "lithium", "gold", "mascara", "bologna"]
+  last = ["chewed gum", "glass shards", "wood", "shark fins", "carbon monoxide", "trig identities"]
+  thing = random.choice(first) + " and " + random.choice(last)
+  return thing
+
+def ran_num():
+  ident = random.randint(1,100)
+  return ident
+
+def parse_data(data):
+  data = data['main']
+  del data['humidity']
+  del data['pressure']
+  return data 
+  
+def weather_data(data,location):
+  keyfeatures= {
+    'temp' : 'Temperature',
+    'feels_like' : 'Feels Like',
+    'temp_min' : 'Minimum Temperature',
+    'temp_max' : 'Maximum Temperature',
+  }
+  location = location.title()
+  message = discord.Embed(title = "Weather in " + str(location), description = "Here is the weather in " + str(location), color = 0x002e67)
+  for key in data:
+    celsius = round(data[key])
+    message.add_field(name = keyfeatures[key], value = str(round(data[key])) + " Fahrenheit /  " + str(round((celsius-32)/1.8)) + " Celsius",inline= False)
+  return message
+
+def error_message(location):
+  location = location.title()
+  return discord.Embed(title='error',description='there was an error retrieving weather data for ' + str(location), color = 0x002e67)     
+      
+async def called_once_a_day():
+ await client.wait_until_ready()
+ channel = client.get_channel("668814312512552982")
+ await channel.send("Greetings Everyone! Here is todays quote. " + str(get_quote()))
+
+
+  
+def math(expression:str):
+  calculation = eval(expression)
+  the = discord.Embed(title='MATH POG',description='Here is ' + expression, color = 0x002e67)
+  the.add_field(name= '---------------',value = calculation)
+  return the
+
+def get_coms():
+  coms = "The commands for me are...\n c.madeof         (What are you made of???)\n c.randint         (Random integer from 1-100)\n c.weather(location)         (Get the weather in a city! hopefully it doesnt break XD)\n c.quote         (Get a random inspirational quote!!!)\n c.pp (PP SIZE POG)\n Calculator!! enter c. then your numbers to be evaluated! \n more to come in the future! - Cheeks"
+  return coms
+
+@client.event
+async def on_ready():
+  await client.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name = 'Wrecking Ball on repeat'))
+  print('we have loggin in as {0.user}'.format(client))
+
+@client.event
+async def on_message(message):
+  if message.author == client.user:
+    return
+  if message.content.startswith('hello'):
+    await message.channel.send("Hello! I hope you are well. :)")
+  if message.content.startswith('c.quote'):
+    quote = get_quote()
+    await message.channel.send(embed=quote) 
+  if message.content.startswith('c.madeof'):
+    name = str(message.author)
+    this = name[0:name.index('#')]
+    madeof = this + " is made of " + get_made()
+    await message.channel.send(madeof)
+  if message.content.startswith('c.weather'):
+    location = message.content.replace('c.weather ','').lower()
+    url = "http://api.openweathermap.org/data/2.5/weather?q="+location+"&appid=30862aaf4639e83e440d2ad9b5913e7a&units=imperial"
+    try:
+      data=json.loads(requests.get(url).content)
+      data = parse_data(data)
+      await message.channel.send(embed =weather_data(data,location)) 
+    except KeyError:
+      await message.channel.send(embed=error_message(location))
+  if message.content.startswith('c.commands'):
+    await message.channel.send(get_coms())
+  if message.content.startswith('c.'):
+    nums = message.content.replace('c.','')
+    await message.channel.send(embed=math(nums))
+keep_alive()
+client.run(os.getenv('TOKEN'))
